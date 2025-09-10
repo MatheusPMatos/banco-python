@@ -4,14 +4,14 @@ from service.chaves import createUser, transferir, decrypt_message, sign_message
 crypto_bp = Blueprint("banco", __name__)
 
 @crypto_bp.route("/user", methods=["POST"])
-def route_generate_keys():
+def route_create_user():
     data = request.get_json()
     public_key, private_key = createUser(data.get("name"))
     return jsonify({"public_key": public_key, "private_key": private_key})
 
 
 @crypto_bp.route("/transferir", methods=["POST"])
-def route_generate_keys():
+def route_transferir():
     data = request.get_json()
     sign = request.headers.get("assinatura")
     message = transferir(data, sign)

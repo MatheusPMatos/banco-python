@@ -80,8 +80,8 @@ def transferir(data: dict, assinatura: str):
     if usuario_remetente is not None:
         return "usuario nao existe"
 
-    if verify_signature(usuario_remetente["public_pem"], data, assinatura):
-        return "assinatura invalida"
+    #if verify_signature(usuario_remetente["public_pem"], data, assinatura):
+    #    return "assinatura invalida"
 
     saldo = usuario_remetente["saldo"]
 
