@@ -6,14 +6,8 @@ import secrets
 import base64
 import os
 
-
 keys_store = { }
 iv = bytes(16)
-
-
-
-
-
 
 def generate_keys():
     private_key = rsa.generate_private_key(
@@ -70,14 +64,13 @@ def createUser(name: str):
 
 def transferir(data: dict, assinatura: str):
 
-
     usuario_destino = keys_store.get(data.get("destino"))
 
     usuario_remetente = keys_store.get(data.get("remetente"))
 
-    if usuario_destino is not None:
+    if usuario_destino is None:
         return "destino nao existe"
-    if usuario_remetente is not None:
+    if usuario_remetente is None:
         return "usuario nao existe"
 
     #if verify_signature(usuario_remetente["public_pem"], data, assinatura):
@@ -97,7 +90,15 @@ def transferir(data: dict, assinatura: str):
 
     return "Transferencia realizada"
 
+def get_saldo(user_key: str):
+    user = keys_store[user_key]
+    if user is None:
+        return "Cliente não encontrado"
+    
+    saldo = user["saldo"] / 100
+    valor_formatado = f"{saldo:.2f}"
 
+    return "Seu saldo: "+valor_formatado
 
 def encrypt_message(user_key: str, message: str):
 
@@ -189,8 +190,7 @@ def decrypt_assimetric_key(private_key_pem: str, encrypted_key: str) -> bytes:
 
 def sign_message(user_key: str, message: str) -> str:
     """Assina mensagem com chave privada"""
-    pem_private = keys_store[user_key]["private"]
-    private_key = serialization.load_pem_private_key(pem_private, password=None)
+    private_key = serialization.load_pem_private_key(user_key.encode(), password=None)
 
     signature = private_key.sign(
         message.encode(),

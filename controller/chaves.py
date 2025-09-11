@@ -1,5 +1,5 @@
 from flask import Blueprint, request, jsonify # type: ignore
-from service.chaves import createUser, transferir, decrypt_message, sign_message, verify_signature, gerar_chave_simetrica, decrypt_assimetric_key
+from service.chaves import createUser, transferir, decrypt_message, get_saldo,sign_message, gerar_chave_simetrica, decrypt_assimetric_key
 
 crypto_bp = Blueprint("banco", __name__)
 
@@ -9,15 +9,17 @@ def route_create_user():
     public_key, private_key = createUser(data.get("name"))
     return jsonify({"public_key": public_key, "private_key": private_key})
 
-
 @crypto_bp.route("/transferir", methods=["POST"])
-def route_transferir():
+def route_transf():    
     data = request.get_json()
-    sign = request.headers.get("assinatura")
+    sign = request.headers.get("Assinatura")    
     message = transferir(data, sign)
     return jsonify({"message": message,})
 
-
+@crypto_bp.route("/saldo/<user>", methods=["GET"])
+def route_saldo(user):
+    message = get_saldo(user)
+    return jsonify({"message": message})
 
 @crypto_bp.route("/decrypt", methods=["POST"])
 def route_decrypt():
@@ -37,15 +39,8 @@ def route_decript_simetric():
     signature = decrypt_assimetric_key(data.get("private_key_pem"),data.get("encrypted_key"))
     return jsonify({"signature": signature})
 
-
 @crypto_bp.route("/sign", methods=["POST"])
 def route_sign():
     data = request.get_json()
-    signature = sign_message(data.get("key"), data.get("message"))
+    signature = sign_message(data.get("private_key"), data.get("payload"))
     return jsonify({"signature": signature})
-
-@crypto_bp.route("/verify", methods=["POST"])
-def route_verify():
-    data = request.get_json()
-    valid = verify_signature(data.get("key"), data.get("message"), data.get("signature"))
-    return jsonify({"valid": valid})
