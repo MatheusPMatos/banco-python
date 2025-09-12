@@ -1,7 +1,6 @@
 from cryptography.hazmat.primitives.asymmetric import rsa, padding # type: ignore
-from cryptography.hazmat.primitives import serialization, hashes,padding # type: ignore
-from cryptography.hazmat.backends import default_backend # type: ignore
-from cryptography.hazmat.primitives.ciphers import Cipher, algorithms, modes # type: ignore
+from cryptography.hazmat.primitives import serialization, hashes # type: ignore
+
 import secrets
 import base64
 import os
@@ -100,97 +99,14 @@ def get_saldo(user_key: str):
 
     return "Seu saldo: "+valor_formatado
 
-def encrypt_message(user_key: str, message: str):
+def sign_message(private_key_pem: str, message: str) -> str:
+    """Assina mensagem com chave privada em PEM e retorna assinatura em base64"""
 
-    simetric_key = base64.b64decode(user_key)
-
-    iv = os.urandom(16)
-
-    cipher = Cipher(
-        algorithms.AES(simetric_key),
-        modes.CBC(iv),
-        backend=default_backend()
-    )
-
-    encryptor = cipher.encryptor()
-
-    padder = padding.PKCS7(128).padder()
-    padded_message = padder.update(message.encode()) + padder.finalize()
-
-    ciphertext = encryptor.update(padded_message) + encryptor.finalize()
-
-    return base64.b64encode(iv + ciphertext).decode()
-
-
-def decrypt_message(user_key: str, encrypted_b64: str):
-    
-    simetric_key = base64.b64decode(user_key)
-
-    encrypted_data = base64.b64decode(encrypted_b64)
-
-    iv = encrypted_data[:16]
-    ciphertext = encrypted_data[16:]
-
-    cipher = Cipher(
-        algorithms.AES(simetric_key),
-        modes.CBC(iv),
-        backend=default_backend()
-    )
-
-    decryptor = cipher.decryptor()
-
-    padded_plaintext = decryptor.update(ciphertext) + decryptor.finalize()
-
-    unpadder = padding.PKCS7(128).unpadder()
-    plaintext = unpadder.update(padded_plaintext) + unpadder.finalize()
-
-    return plaintext.decode()
-
-def gerar_chave_simetrica(public_key_pem: str) -> str:
-    """Gera uma chave simétrica (AES) e a criptografa com a chave pública RSA"""
-
-    chave_simetrica = secrets.token_bytes(16)
-
-    loaded_public_key = serialization.load_pem_public_key(
-        public_key_pem.encode(),
-        backend=default_backend()
-    )
-
-    encrypted_key = loaded_public_key.encrypt(
-        chave_simetrica,
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
-        )
-    )
-
-    return base64.b64encode(encrypted_key).decode()
-
-def decrypt_assimetric_key(private_key_pem: str, encrypted_key: str) -> bytes:
-
-    encrypted_key = base64.b64decode(encrypted_key)
-
+    # Carregar a chave privada a partir da string PEM
     private_key = serialization.load_pem_private_key(
         private_key_pem.encode(),
         password=None,
-        backend=default_backend()
     )
-
-    symmetric_key = private_key.decrypt(
-        encrypted_key,
-        padding.OAEP(
-            mgf=padding.MGF1(algorithm=hashes.SHA256()),
-            algorithm=hashes.SHA256(),
-            label=None
-        )
-    )
-
-    return base64.b64encode(symmetric_key).decode()
-
-def sign_message(user_key: str, message: str) -> str:
-    """Assina mensagem com chave privada"""
-    private_key = serialization.load_pem_private_key(user_key.encode(), password=None)
 
     signature = private_key.sign(
         message.encode(),
@@ -200,7 +116,6 @@ def sign_message(user_key: str, message: str) -> str:
         ),
         hashes.SHA256()
     )
-
     return base64.b64encode(signature).decode()
 
 

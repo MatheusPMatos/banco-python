@@ -1,5 +1,6 @@
 from flask import Blueprint, request, jsonify # type: ignore
-from service.chaves import createUser, transferir, decrypt_message, get_saldo,sign_message, gerar_chave_simetrica, decrypt_assimetric_key
+import json
+from service.chaves import createUser, transferir, get_saldo,sign_message
 
 crypto_bp = Blueprint("banco", __name__)
 
@@ -21,26 +22,17 @@ def route_saldo(user):
     message = get_saldo(user)
     return jsonify({"message": message})
 
-@crypto_bp.route("/decrypt", methods=["POST"])
-def route_decrypt():
-    data = request.get_json()
-    decrypted = decrypt_message(data.get("key"), data.get("encrypted"))
-    return jsonify({"decrypted": decrypted})
-
-@crypto_bp.route("/simetric", methods=["POST"])
-def route_simetric():
-    data = request.get_json()
-    signature = gerar_chave_simetrica(data.get("public_key_pem"))
-    return jsonify({"signature": signature})
-
-@crypto_bp.route("/decript-simetric", methods=["POST"])
-def route_decript_simetric():
-    data = request.get_json()
-    signature = decrypt_assimetric_key(data.get("private_key_pem"),data.get("encrypted_key"))
-    return jsonify({"signature": signature})
 
 @crypto_bp.route("/sign", methods=["POST"])
 def route_sign():
     data = request.get_json()
-    signature = sign_message(data.get("private_key"), data.get("payload"))
+    private_key = data.get("private_key")
+    payload = data.get("payload")
+
+    if not private_key or not payload:
+        return jsonify({"error": "private_key e payload são obrigatórios"}), 400
+
+    # transforma o dict em string JSON determinística
+    payload_str = json.dumps(payload, separators=(",", ":"), sort_keys=True)
+    signature = sign_message(data.get("private_key"), payload_str)
     return jsonify({"signature": signature})
