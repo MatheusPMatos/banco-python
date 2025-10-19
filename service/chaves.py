@@ -1,9 +1,8 @@
 from cryptography.hazmat.primitives.asymmetric import rsa, padding # type: ignore
 from cryptography.hazmat.primitives import serialization, hashes # type: ignore
 
-import secrets
+import json
 import base64
-import os
 
 keys_store = { }
 iv = bytes(16)
@@ -27,18 +26,15 @@ def generate_keys():
 
     return pem_public.decode(), pem_private.decode()
 
-def verify_signature(public_pem: str, message: any, signature_b64: str) -> bool:
-    
-    public_key = serialization.load_pem_public_key(public_pem)
-
-    
+def verify_signature(public_pem: str, message: dict, signature_b64: str) -> bool:
+    public_key = serialization.load_pem_public_key(public_pem.encode("utf-8"))
+    message_bytes = json.dumps(message, sort_keys=True).encode("utf-8")
 
     try:
         signature = base64.b64decode(signature_b64)
-
         public_key.verify(
             signature,
-            message.encode(),
+            message_bytes,
             padding.PSS(
                 mgf=padding.MGF1(hashes.SHA256()),
                 salt_length=padding.PSS.MAX_LENGTH
@@ -46,7 +42,8 @@ def verify_signature(public_pem: str, message: any, signature_b64: str) -> bool:
             hashes.SHA256()
         )
         return True
-    except Exception:
+    except Exception as e:
+        print("Erro na verificação:", e)
         return False
 
 
@@ -72,8 +69,8 @@ def transferir(data: dict, assinatura: str):
     if usuario_remetente is None:
         return "usuario nao existe"
 
-    #if verify_signature(usuario_remetente["public_pem"], data, assinatura):
-    #    return "assinatura invalida"
+    if verify_signature(usuario_remetente["public_pem"], data, assinatura):
+        return "assinatura invalida"
 
     saldo = usuario_remetente["saldo"]
 
@@ -99,15 +96,8 @@ def get_saldo(user_key: str):
 
     return "Seu saldo: "+valor_formatado
 
-def sign_message(private_key_pem: str, message: str) -> str:
-    """Assina mensagem com chave privada em PEM e retorna assinatura em base64"""
-
-    # Carregar a chave privada a partir da string PEM
-    private_key = serialization.load_pem_private_key(
-        private_key_pem.encode(),
-        password=None,
-    )
-
+def sign_message(private_key, message: str) -> str:
+    
     signature = private_key.sign(
         message.encode(),
         padding.PSS(
@@ -116,6 +106,6 @@ def sign_message(private_key_pem: str, message: str) -> str:
         ),
         hashes.SHA256()
     )
-    return base64.b64encode(signature).decode()
+    return base64.b64encode(signature).decode("utf-8")
 
 
